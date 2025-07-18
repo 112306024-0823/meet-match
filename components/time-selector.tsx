@@ -7,8 +7,12 @@ import { Badge } from "@/components/ui/badge"
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { MousePointer, Move, Clock, Calendar, BarChart3 } from "lucide-react"
 
-// 時間段定義（9:00 - 21:00，每30分鐘一格）
+// 時間段定義（7:00 - 21:00，每30分鐘一格）
 const TIME_SLOTS = [
+  { start: "07:00", end: "07:30", label: "07:00-07:30" },
+  { start: "07:30", end: "08:00", label: "07:30-08:00" },
+  { start: "08:00", end: "08:30", label: "08:00-08:30" },
+  { start: "08:30", end: "09:00", label: "08:30-09:00" },
   { start: "09:00", end: "09:30", label: "09:00-09:30" },
   { start: "09:30", end: "10:00", label: "09:30-10:00" },
   { start: "10:00", end: "10:30", label: "10:00-10:30" },
@@ -508,9 +512,7 @@ export default function TimeSelector({ onSelectionChange, initialSelection = new
                       className="h-12 flex items-center justify-center text-xs font-medium text-slate-600 bg-slate-50 rounded px-1"
                     >
                       <div className="text-center leading-tight">
-                        <div>{timeSlot.start}</div>
-                        <div className="text-slate-400">|</div>
-                        <div>{timeSlot.end}</div>
+                        <div>{timeSlot.start}-{timeSlot.end}</div>
                       </div>
                     </div>
                   ))}
@@ -553,9 +555,7 @@ export default function TimeSelector({ onSelectionChange, initialSelection = new
                           title={`${weekday.label} ${timeSlot.label}`}
                         >
                           <div className="text-center text-xs font-medium leading-tight px-1">
-                            <div>{timeSlot.start}</div>
-                            <div className={`text-xs ${isSelected ? "text-emerald-100" : "text-slate-400"}`}>-</div>
-                            <div>{timeSlot.end}</div>
+                            <div>{timeSlot.start}-{timeSlot.end}</div>
                           </div>
                         </div>
                       )

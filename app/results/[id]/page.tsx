@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -109,13 +109,23 @@ const getIntensityColor = (count: number, maxCount: number) => {
   return "bg-slate-100 text-slate-600"
 }
 
-export default function ResultsPage({ params }: { params: { id: string } }) {
+export default function ResultsPage({ params }: { params: Promise<{ id: string }> }) {
   const [copied, setCopied] = useState(false)
+  const [resolvedParams, setResolvedParams] = useState<{ id: string } | null>(null)
   const bestSlots = getBestTimeSlots()
   const maxCount = Math.max(...mockResults.flatMap((day) => day.times.map((slot) => slot.count)))
 
+  useEffect(() => {
+    const resolveParams = async () => {
+      const resolved = await params
+      setResolvedParams(resolved)
+    }
+    resolveParams()
+  }, [params])
+
   const copyInviteLink = () => {
-    const link = `${window.location.origin}/vote/${params.id}`
+    if (!resolvedParams) return
+    const link = `${window.location.origin}/vote/${resolvedParams.id}`
     navigator.clipboard.writeText(link)
     setCopied(true)
     setTimeout(() => setCopied(false), 2000)

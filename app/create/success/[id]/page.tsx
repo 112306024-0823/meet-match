@@ -20,19 +20,30 @@ interface EventData {
   participants: any[]
 }
 
-export default function CreateSuccessPage({ params }: { params: { id: string } }) {
+export default function CreateSuccessPage({ params }: { params: Promise<{ id: string }> }) {
   const [eventData, setEventData] = useState<EventData | null>(null)
   const [copied, setCopied] = useState(false)
   const [showQR, setShowQR] = useState(false)
+  const [resolvedParams, setResolvedParams] = useState<{ id: string } | null>(null)
 
   useEffect(() => {
-    // 從 localStorage 獲取事件資料
-    const events = JSON.parse(localStorage.getItem("meetmatch_events") || "[]")
-    const event = events.find((e: EventData) => e.id === params.id)
-    setEventData(event)
-  }, [params.id])
+    const resolveParams = async () => {
+      const resolved = await params
+      setResolvedParams(resolved)
+    }
+    resolveParams()
+  }, [params])
 
-  const inviteUrl = `${typeof window !== "undefined" ? window.location.origin : ""}/vote/${params.id}`
+  useEffect(() => {
+    if (resolvedParams) {
+      // 從 localStorage 獲取事件資料
+      const events = JSON.parse(localStorage.getItem("meetmatch_events") || "[]")
+      const event = events.find((e: EventData) => e.id === resolvedParams.id)
+      setEventData(event)
+    }
+  }, [resolvedParams])
+
+  const inviteUrl = resolvedParams ? `${typeof window !== "undefined" ? window.location.origin : ""}/vote/${resolvedParams.id}` : ""
 
   const copyInviteLink = async () => {
     try {
@@ -205,18 +216,22 @@ ${inviteUrl}
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-3">
-                  <Link href={`/results/${params.id}`}>
-                    <Button variant="outline" className="w-full justify-start bg-transparent">
-                      <BarChart3 className="w-4 h-4 mr-2" />
-                      查看統計結果
-                    </Button>
-                  </Link>
-                  <Link href={`/vote/${params.id}`}>
-                    <Button variant="outline" className="w-full justify-start bg-transparent">
-                      <ExternalLink className="w-4 h-4 mr-2" />
-                      預覽投票頁面
-                    </Button>
-                  </Link>
+                  {resolvedParams && (
+                    <>
+                      <Link href={`/results/${resolvedParams.id}`}>
+                        <Button variant="outline" className="w-full justify-start bg-transparent">
+                          <BarChart3 className="w-4 h-4 mr-2" />
+                          查看統計結果
+                        </Button>
+                      </Link>
+                      <Link href={`/vote/${resolvedParams.id}`}>
+                        <Button variant="outline" className="w-full justify-start bg-transparent">
+                          <ExternalLink className="w-4 h-4 mr-2" />
+                          預覽投票頁面
+                        </Button>
+                      </Link>
+                    </>
+                  )}
                   <Link href="/my-invites">
                     <Button variant="outline" className="w-full justify-start bg-transparent">
                       <Calendar className="w-4 h-4 mr-2" />
@@ -261,14 +276,16 @@ ${inviteUrl}
                   建立另一個邀約
                 </Button>
               </Link>
-              <Link href={`/results/${params.id}`}>
-                <Button
-                  size="lg"
-                  className="bg-gradient-to-r from-teal-500 to-blue-600 hover:from-teal-600 hover:to-blue-700 text-white"
-                >
-                  查看統計結果
-                </Button>
-              </Link>
+              {resolvedParams && (
+                <Link href={`/results/${resolvedParams.id}`}>
+                  <Button
+                    size="lg"
+                    className="bg-gradient-to-r from-teal-500 to-blue-600 hover:from-teal-600 hover:to-blue-700 text-white"
+                  >
+                    查看統計結果
+                  </Button>
+                </Link>
+              )}
             </div>
           </div>
         </div>
