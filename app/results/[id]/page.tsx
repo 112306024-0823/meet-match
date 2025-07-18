@@ -7,97 +7,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { ArrowLeft, Calendar, Clock, Users, Crown, Share2, Copy } from "lucide-react"
-
-// 模擬資料
-const mockEvent = {
-  id: "abc123",
-  name: "團隊週會討論",
-  description: "討論下週的專案進度和工作分配，預計需要1-2小時。",
-  dateRange: "2024-01-15 至 2024-01-19",
-  timeRange: "09:00 - 18:00",
-  totalParticipants: 5,
-}
-
-const mockParticipants = [
-  { name: "Alice", joinedAt: "2024-01-10 14:30" },
-  { name: "Bob", joinedAt: "2024-01-10 15:45" },
-  { name: "Charlie", joinedAt: "2024-01-11 09:20" },
-  { name: "Diana", joinedAt: "2024-01-11 16:10" },
-  { name: "Eve", joinedAt: "2024-01-12 11:30" },
-]
-
-// 模擬統計結果 - 每個時段有多少人選擇
-const mockResults = [
-  {
-    date: "2024-01-15",
-    day: "週一",
-    times: [
-      { time: "09:00", count: 2 },
-      { time: "09:30", count: 3 },
-      { time: "10:00", count: 5 },
-      { time: "10:30", count: 4 },
-      { time: "11:00", count: 3 },
-      { time: "11:30", count: 2 },
-      { time: "14:00", count: 4 },
-      { time: "14:30", count: 5 },
-      { time: "15:00", count: 3 },
-      { time: "15:30", count: 2 },
-      { time: "16:00", count: 1 },
-      { time: "16:30", count: 1 },
-    ],
-  },
-  {
-    date: "2024-01-16",
-    day: "週二",
-    times: [
-      { time: "09:00", count: 1 },
-      { time: "09:30", count: 2 },
-      { time: "10:00", count: 4 },
-      { time: "10:30", count: 5 },
-      { time: "11:00", count: 4 },
-      { time: "11:30", count: 3 },
-      { time: "14:00", count: 3 },
-      { time: "14:30", count: 4 },
-      { time: "15:00", count: 5 },
-      { time: "15:30", count: 4 },
-      { time: "16:00", count: 2 },
-      { time: "16:30", count: 1 },
-    ],
-  },
-  {
-    date: "2024-01-17",
-    day: "週三",
-    times: [
-      { time: "09:00", count: 3 },
-      { time: "09:30", count: 4 },
-      { time: "10:00", count: 3 },
-      { time: "10:30", count: 2 },
-      { time: "11:00", count: 2 },
-      { time: "11:30", count: 1 },
-      { time: "14:00", count: 5 },
-      { time: "14:30", count: 5 },
-      { time: "15:00", count: 4 },
-      { time: "15:30", count: 3 },
-      { time: "16:00", count: 3 },
-      { time: "16:30", count: 2 },
-    ],
-  },
-]
-
-// 找出最佳時段（最多人選擇的時段）
-const getBestTimeSlots = () => {
-  const allSlots = mockResults.flatMap((day) =>
-    day.times.map((slot) => ({
-      date: day.date,
-      day: day.day,
-      time: slot.time,
-      count: slot.count,
-    })),
-  )
-
-  const maxCount = Math.max(...allSlots.map((slot) => slot.count))
-  return allSlots.filter((slot) => slot.count === maxCount)
-}
+import { resultsApi } from "@/lib/api"
 
 const getIntensityColor = (count: number, maxCount: number) => {
   const intensity = count / maxCount
@@ -112,8 +22,16 @@ const getIntensityColor = (count: number, maxCount: number) => {
 export default function ResultsPage({ params }: { params: Promise<{ id: string }> }) {
   const [copied, setCopied] = useState(false)
   const [resolvedParams, setResolvedParams] = useState<{ id: string } | null>(null)
-  const bestSlots = getBestTimeSlots()
-  const maxCount = Math.max(...mockResults.flatMap((day) => day.times.map((slot) => slot.count)))
+  const [resultsData, setResultsData] = useState<any>(null)
+  const [isLoading, setIsLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+  
+  // 從 API 結果計算資料
+  const bestSlots = resultsData?.stats?.bestTimeSlots || []
+  const maxCount = resultsData?.stats?.maxVotesPerSlot || 0
+  const eventData = resultsData?.event || null
+  const participants = resultsData?.participants || []
+  const dayResults = resultsData?.results || []
 
   useEffect(() => {
     const resolveParams = async () => {
@@ -123,12 +41,63 @@ export default function ResultsPage({ params }: { params: Promise<{ id: string }
     resolveParams()
   }, [params])
 
+  // 獲取結果資料
+  useEffect(() => {
+    if (resolvedParams) {
+      const fetchResults = async () => {
+        try {
+          setIsLoading(true)
+          setError(null)
+          const results = await resultsApi.getByEventId(resolvedParams.id)
+          setResultsData(results)
+        } catch (error) {
+          console.error('獲取結果失敗:', error)
+          setError('獲取結果失敗，請稍後再試')
+        } finally {
+          setIsLoading(false)
+        }
+      }
+      fetchResults()
+    }
+  }, [resolvedParams])
+
   const copyInviteLink = () => {
     if (!resolvedParams) return
     const link = `${window.location.origin}/vote/${resolvedParams.id}`
     navigator.clipboard.writeText(link)
     setCopied(true)
     setTimeout(() => setCopied(false), 2000)
+  }
+
+  // 加載狀態
+  if (isLoading || !resultsData) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-teal-600 mx-auto mb-4"></div>
+          <p className="text-slate-600">載入結果資料中...</p>
+        </div>
+      </div>
+    )
+  }
+
+  // 錯誤狀態
+  if (error) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="text-red-500 mb-4">
+            <svg className="w-12 h-12 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+          </div>
+          <p className="text-slate-600 mb-4">{error}</p>
+          <Button onClick={() => window.location.reload()} variant="outline">
+            重新載入
+          </Button>
+        </div>
+      </div>
+    )
   }
 
   return (
@@ -160,20 +129,20 @@ export default function ResultsPage({ params }: { params: Promise<{ id: string }
           <div className="grid lg:grid-cols-3 gap-6 mb-8">
             <Card className="lg:col-span-2 shadow-lg border-slate-200">
               <CardHeader>
-                <CardTitle className="text-2xl text-slate-800 mb-2">{mockEvent.name}</CardTitle>
-                <CardDescription className="text-slate-600 text-base mb-4">{mockEvent.description}</CardDescription>
+                <CardTitle className="text-2xl text-slate-800 mb-2">{eventData.name}</CardTitle>
+                <CardDescription className="text-slate-600 text-base mb-4">{eventData.description}</CardDescription>
                 <div className="flex flex-wrap gap-3">
                   <Badge variant="secondary" className="bg-teal-100 text-teal-700">
                     <Calendar className="w-4 h-4 mr-1" />
-                    {mockEvent.dateRange}
+                    {eventData.dateRange}
                   </Badge>
                   <Badge variant="secondary" className="bg-blue-100 text-blue-700">
                     <Clock className="w-4 h-4 mr-1" />
-                    {mockEvent.timeRange}
+                    {eventData.timeRange}
                   </Badge>
                   <Badge variant="secondary" className="bg-purple-100 text-purple-700">
                     <Users className="w-4 h-4 mr-1" />
-                    {mockEvent.totalParticipants} 人參與
+                    {eventData.totalParticipants} 人參與
                   </Badge>
                 </div>
               </CardHeader>
@@ -188,9 +157,9 @@ export default function ResultsPage({ params }: { params: Promise<{ id: string }
               </CardHeader>
               <CardContent>
                 <div className="space-y-3">
-                  {bestSlots.slice(0, 3).map((slot, index) => (
+                  {bestSlots.slice(0, 3).map((slot: any, index: number) => (
                     <div
-                      key={`${slot.date}-${slot.time}`}
+                      key={`${slot.day}-${slot.time}`}
                       className="bg-gradient-to-r from-emerald-50 to-green-50 border border-emerald-200 rounded-lg p-3"
                     >
                       <div className="flex items-center justify-between">
@@ -198,10 +167,12 @@ export default function ResultsPage({ params }: { params: Promise<{ id: string }
                           <p className="font-medium text-emerald-800">
                             {slot.day} {slot.time}
                           </p>
-                          <p className="text-sm text-emerald-600">{slot.date}</p>
+                          <p className="text-sm text-emerald-600">
+                            {slot.participants?.length || 0} 人可參加
+                          </p>
                         </div>
                         <Badge className="bg-emerald-500 text-white">
-                          {slot.count}/{mockEvent.totalParticipants}
+                          {slot.count}/{eventData.totalParticipants}
                         </Badge>
                       </div>
                     </div>
@@ -226,26 +197,26 @@ export default function ResultsPage({ params }: { params: Promise<{ id: string }
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-6">
-                    {mockResults.map((dayResult) => (
-                      <div key={dayResult.date} className="space-y-3">
+                    {dayResults.map((dayResult: any) => (
+                      <div key={dayResult.day} className="space-y-3">
                         <h3 className="font-semibold text-slate-700 flex items-center">
                           <Calendar className="w-4 h-4 mr-2" />
-                          {dayResult.date} ({dayResult.day})
+                          {dayResult.day}
                         </h3>
                         <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8 gap-2">
-                          {dayResult.times.map((timeSlot) => (
+                          {dayResult.times.map((timeSlot: any) => (
                             <div
-                              key={timeSlot.time}
+                              key={`${timeSlot.timeStart}-${timeSlot.timeEnd}`}
                               className={`
                                 px-3 py-2 rounded-lg text-sm font-medium text-center transition-all duration-200
                                 ${getIntensityColor(timeSlot.count, maxCount)}
                                 hover:scale-105 cursor-pointer
                               `}
-                              title={`${timeSlot.time}: ${timeSlot.count}/${mockEvent.totalParticipants} 人可參加`}
+                              title={`${timeSlot.timeStart}-${timeSlot.timeEnd}: ${timeSlot.count}/${eventData.totalParticipants} 人可參加`}
                             >
-                              <div>{timeSlot.time}</div>
+                              <div>{timeSlot.timeStart}</div>
                               <div className="text-xs opacity-90">
-                                {timeSlot.count}/{mockEvent.totalParticipants}
+                                {timeSlot.count}/{eventData.totalParticipants}
                               </div>
                             </div>
                           ))}
@@ -286,19 +257,21 @@ export default function ResultsPage({ params }: { params: Promise<{ id: string }
                     <Users className="w-5 h-5 mr-2 text-teal-600" />
                     參與者清單
                   </CardTitle>
-                  <CardDescription>共有 {mockParticipants.length} 位朋友參與了這次時間調查</CardDescription>
+                  <CardDescription>共有 {participants.length} 位朋友參與了這次時間調查</CardDescription>
                 </CardHeader>
                 <CardContent>
                   <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
-                    {mockParticipants.map((participant, index) => (
-                      <div key={index} className="bg-slate-50 border border-slate-200 rounded-lg p-4">
+                    {participants.map((participant: any, index: number) => (
+                      <div key={participant.id} className="bg-slate-50 border border-slate-200 rounded-lg p-4">
                         <div className="flex items-center justify-between mb-2">
                           <h4 className="font-medium text-slate-800">{participant.name}</h4>
                           <Badge variant="outline" className="text-xs">
                             #{index + 1}
                           </Badge>
                         </div>
-                        <p className="text-sm text-slate-600">參與時間：{participant.joinedAt}</p>
+                        <p className="text-sm text-slate-600">
+                          參與時間：{new Date(participant.joinedAt).toLocaleString('zh-TW')}
+                        </p>
                       </div>
                     ))}
                   </div>

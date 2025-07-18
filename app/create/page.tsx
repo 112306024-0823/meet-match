@@ -11,6 +11,7 @@ import { Textarea } from "@/components/ui/textarea"
 import { Calendar, ArrowLeft, Clock } from "lucide-react"
 import { useState } from "react"
 import { useRouter } from "next/navigation"
+import { eventsApi } from "@/lib/api"
 
 export default function CreateInvitePage() {
   const router = useRouter()
@@ -49,28 +50,21 @@ export default function CreateInvitePage() {
     setIsLoading(true)
 
     try {
-      // 模擬 API 調用
-      await new Promise((resolve) => setTimeout(resolve, 1500))
-
-      // 生成邀約 ID
-      const inviteId = Math.random().toString(36).substring(2, 15)
-
-      // 儲存到 localStorage (實際應用中會儲存到資料庫)
-      const eventData = {
-        ...formData,
-        id: inviteId,
-        createdAt: new Date().toISOString(),
-        participants: [],
-      }
-
-      const existingEvents = JSON.parse(localStorage.getItem("meetmatch_events") || "[]")
-      existingEvents.push(eventData)
-      localStorage.setItem("meetmatch_events", JSON.stringify(existingEvents))
+      // 呼叫 API 建立活動
+      const event = await eventsApi.create({
+        name: formData.eventName,
+        description: formData.eventDescription,
+        startDate: formData.startDate,
+        endDate: formData.endDate,
+        startTime: formData.startTime,
+        endTime: formData.endTime,
+      })
 
       // 跳轉到成功頁面
-      router.push(`/create/success/${inviteId}`)
+      router.push(`/create/success/${event.id}`)
     } catch (error) {
-      alert("建立邀約時發生錯誤，請稍後再試")
+      console.error('建立活動失敗:', error)
+      alert(error instanceof Error ? error.message : "建立邀約時發生錯誤，請稍後再試")
     } finally {
       setIsLoading(false)
     }

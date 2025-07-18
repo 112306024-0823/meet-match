@@ -8,34 +8,22 @@ import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Calendar, Clock, Users, Search, Plus, BarChart3, Share2, ArrowLeft, Trash2 } from "lucide-react"
-
-interface EventData {
-  id: string
-  eventName: string
-  eventDescription: string
-  startDate: string
-  endDate: string
-  startTime: string
-  endTime: string
-  createdAt: string
-  participants: any[]
-}
+import { eventsApi, type Event } from "@/lib/api"
 
 export default function MyInvitesPage() {
-  const [events, setEvents] = useState<EventData[]>([])
+  const [events, setEvents] = useState<Event[]>([])
   const [searchTerm, setSearchTerm] = useState("")
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    // 從 localStorage 載入事件資料
-    const loadEvents = () => {
+    // 從 API 載入事件資料
+    const loadEvents = async () => {
       try {
-        const storedEvents = JSON.parse(localStorage.getItem("meetmatch_events") || "[]")
-        setEvents(
-          storedEvents.sort(
-            (a: EventData, b: EventData) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
-          ),
-        )
+        setLoading(true)
+        const eventsData = await eventsApi.getAll()
+        setEvents(eventsData.sort(
+          (a: Event, b: Event) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
+        ))
       } catch (error) {
         console.error("載入事件資料時發生錯誤:", error)
       } finally {
@@ -48,8 +36,8 @@ export default function MyInvitesPage() {
 
   const filteredEvents = events.filter(
     (event) =>
-      event.eventName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      event.eventDescription.toLowerCase().includes(searchTerm.toLowerCase()),
+      event.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (event.description?.toLowerCase() || "").includes(searchTerm.toLowerCase()),
   )
 
   const activeEvents = filteredEvents.filter((event) => {
@@ -92,14 +80,14 @@ export default function MyInvitesPage() {
     })
   }
 
-  const EventCard = ({ event, isExpired = false }: { event: EventData; isExpired?: boolean }) => (
+  const EventCard = ({ event, isExpired = false }: { event: Event; isExpired?: boolean }) => (
     <Card className={`shadow-sm border-slate-200 hover:shadow-md transition-shadow ${isExpired ? "opacity-75" : ""}`}>
       <CardHeader>
         <div className="flex items-start justify-between">
           <div className="flex-1">
-            <CardTitle className="text-lg text-slate-800 mb-2">{event.eventName}</CardTitle>
-            {event.eventDescription && (
-              <CardDescription className="text-slate-600 mb-3 line-clamp-2">{event.eventDescription}</CardDescription>
+            <CardTitle className="text-lg text-slate-800 mb-2">{event.name}</CardTitle>
+            {event.description && (
+              <CardDescription className="text-slate-600 mb-3 line-clamp-2">{event.description}</CardDescription>
             )}
             <div className="flex flex-wrap gap-2">
               <Badge variant="secondary" className="bg-teal-100 text-teal-700 text-xs">
@@ -112,7 +100,7 @@ export default function MyInvitesPage() {
               </Badge>
               <Badge variant="secondary" className="bg-purple-100 text-purple-700 text-xs">
                 <Users className="w-3 h-3 mr-1" />
-                {event.participants?.length || 0} 人參與
+                {event._count?.participants || event.participants?.length || 0} 人參與
               </Badge>
               {isExpired && (
                 <Badge variant="secondary" className="bg-red-100 text-red-700 text-xs">

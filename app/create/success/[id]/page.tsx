@@ -7,24 +7,14 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge"
 import { Separator } from "@/components/ui/separator"
 import { Calendar, Clock, Copy, Share2, QrCode, CheckCircle, ExternalLink, Settings, BarChart3 } from "lucide-react"
-
-interface EventData {
-  id: string
-  eventName: string
-  eventDescription: string
-  startDate: string
-  endDate: string
-  startTime: string
-  endTime: string
-  createdAt: string
-  participants: any[]
-}
+import { eventsApi, type Event } from "@/lib/api"
 
 export default function CreateSuccessPage({ params }: { params: Promise<{ id: string }> }) {
-  const [eventData, setEventData] = useState<EventData | null>(null)
+  const [eventData, setEventData] = useState<Event | null>(null)
   const [copied, setCopied] = useState(false)
   const [showQR, setShowQR] = useState(false)
   const [resolvedParams, setResolvedParams] = useState<{ id: string } | null>(null)
+  const [isLoading, setIsLoading] = useState(true)
 
   useEffect(() => {
     const resolveParams = async () => {
@@ -36,10 +26,20 @@ export default function CreateSuccessPage({ params }: { params: Promise<{ id: st
 
   useEffect(() => {
     if (resolvedParams) {
-      // 從 localStorage 獲取事件資料
-      const events = JSON.parse(localStorage.getItem("meetmatch_events") || "[]")
-      const event = events.find((e: EventData) => e.id === resolvedParams.id)
-      setEventData(event)
+      // 從 API 獲取事件資料
+      const fetchEventData = async () => {
+        try {
+          setIsLoading(true)
+          const event = await eventsApi.getById(resolvedParams.id)
+          setEventData(event)
+        } catch (error) {
+          console.error('獲取活動資料失敗:', error)
+          // 可以顯示錯誤訊息或重定向
+        } finally {
+          setIsLoading(false)
+        }
+      }
+      fetchEventData()
     }
   }, [resolvedParams])
 
@@ -64,12 +64,12 @@ export default function CreateSuccessPage({ params }: { params: Promise<{ id: st
   }
 
   const shareViaWhatsApp = () => {
-    const message = `邀請您參與「${eventData?.eventName}」的時間調查！請點擊連結填寫您的可參加時間：${inviteUrl}`
+    const message = `邀請您參與「${eventData?.name}」的時間調查！請點擊連結填寫您的可參加時間：${inviteUrl}`
     window.open(`https://wa.me/?text=${encodeURIComponent(message)}`, "_blank")
   }
 
   const shareViaLine = () => {
-    const message = `邀請您參與「${eventData?.eventName}」的時間調查！${inviteUrl}`
+    const message = `邀請您參與「${eventData?.name}」的時間調查！${inviteUrl}`
     window.open(
       `https://social-plugins.line.me/lineit/share?url=${encodeURIComponent(inviteUrl)}&text=${encodeURIComponent(message)}`,
       "_blank",
@@ -77,12 +77,12 @@ export default function CreateSuccessPage({ params }: { params: Promise<{ id: st
   }
 
   const shareViaEmail = () => {
-    const subject = `邀請參與：${eventData?.eventName} - 時間調查`
+    const subject = `邀請參與：${eventData?.name} - 時間調查`
     const body = `您好！
 
-我邀請您參與「${eventData?.eventName}」的時間調查。
+我邀請您參與「${eventData?.name}」的時間調查。
 
-活動說明：${eventData?.eventDescription || "無"}
+活動說明：${eventData?.description || "無"}
 日期範圍：${eventData?.startDate} 至 ${eventData?.endDate}
 時間範圍：${eventData?.startTime} - ${eventData?.endTime}
 
@@ -94,7 +94,7 @@ ${inviteUrl}
     window.open(`mailto:?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`)
   }
 
-  if (!eventData) {
+  if (isLoading || !eventData) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 flex items-center justify-center">
         <div className="text-center">
@@ -142,9 +142,9 @@ ${inviteUrl}
             <div className="lg:col-span-2 space-y-6">
               <Card className="shadow-lg border-slate-200">
                 <CardHeader>
-                  <CardTitle className="text-xl text-slate-800">{eventData.eventName}</CardTitle>
-                  {eventData.eventDescription && (
-                    <CardDescription className="text-slate-600 text-base">{eventData.eventDescription}</CardDescription>
+                  <CardTitle className="text-xl text-slate-800">{eventData.name}</CardTitle>
+                  {eventData.description && (
+                    <CardDescription className="text-slate-600 text-base">{eventData.description}</CardDescription>
                   )}
                   <div className="flex flex-wrap gap-3 pt-2">
                     <Badge variant="secondary" className="bg-teal-100 text-teal-700">

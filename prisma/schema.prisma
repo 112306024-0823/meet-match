@@ -1,0 +1,59 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = "file:./dev.db"
+}
+
+model Event {
+  id          String   @id @default(cuid())
+  name        String
+  description String?
+  startDate   String   // 格式: YYYY-MM-DD
+  endDate     String   // 格式: YYYY-MM-DD
+  startTime   String   // 格式: HH:MM
+  endTime     String   // 格式: HH:MM
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // 關聯
+  participants Participant[]
+  timeSlots    TimeSlot[]
+
+  @@map("events")
+}
+
+model Participant {
+  id       String   @id @default(cuid())
+  eventId  String
+  name     String
+  email    String?
+  joinedAt DateTime @default(now())
+
+  // 關聯
+  event     Event      @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  timeSlots TimeSlot[]
+
+  @@map("participants")
+}
+
+model TimeSlot {
+  id            String   @id @default(cuid())
+  eventId       String
+  participantId String
+  day           String   // 格式: monday, tuesday, etc.
+  timeStart     String   // 格式: HH:MM
+  timeEnd       String   // 格式: HH:MM
+  createdAt     DateTime @default(now())
+
+  // 關聯
+  event       Event       @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  participant Participant @relation(fields: [participantId], references: [id], onDelete: Cascade)
+
+  @@map("time_slots")
+} 

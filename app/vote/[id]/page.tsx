@@ -9,6 +9,8 @@ import { Label } from "@/components/ui/label"
 import { Badge } from "@/components/ui/badge"
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { ArrowLeft, Calendar, Clock, User, Users, MousePointer, Move } from "lucide-react"
+import { eventsApi, participantsApi, votesApi, convertSelectedSlotsToTimeSlots, type Event } from "@/lib/api"
+import { useRouter } from "next/navigation"
 
 // 時間段定義（7:00 - 24:00，每30分鐘一格，共34個時段）
 const TIME_SLOTS = [
@@ -48,28 +50,24 @@ const TIME_SLOTS = [
   { start: "23:30", end: "24:00", label: "23:30-24:00" },
 ]
 
-// 星期定義（週一到週五）
-const WEEKDAYS = [
-  { key: "monday", label: "週一", short: "一" },
-  { key: "tuesday", label: "週二", short: "二" },
-  { key: "wednesday", label: "週三", short: "三" },
-  { key: "thursday", label: "週四", short: "四" },
-  { key: "friday", label: "週五", short: "五" },
-]
-
-// 模擬資料
-const mockEvent = {
-  id: "abc123",
-  name: "團隊週會討論",
-  description: "討論下週的專案進度和工作分配，預計需要1-2小時。",
-  dateRange: "2024-01-15 至 2024-01-19",
-  timeRange: "07:00 - 24:00",
+// 星期標籤映射
+const WEEKDAY_LABELS = {
+  0: { key: "sunday", label: "週日", short: "日" },
+  1: { key: "monday", label: "週一", short: "一" },
+  2: { key: "tuesday", label: "週二", short: "二" },
+  3: { key: "wednesday", label: "週三", short: "三" },
+  4: { key: "thursday", label: "週四", short: "四" },
+  5: { key: "friday", label: "週五", short: "五" },
+  6: { key: "saturday", label: "週六", short: "六" },
 }
+
+
 
 type SelectionMode = "click" | "drag"
 type TimeSlotKey = string // format: "monday-07:00-07:30"
 
-export default function VotePage({ params }: { params: { id: string } }) {
+export default function VotePage({ params }: { params: Promise<{ id: string }> }) {
+  const router = useRouter()
   const [mode, setMode] = useState<SelectionMode>("click")
   const [selectedSlots, setSelectedSlots] = useState<Set<string>>(new Set())
   const [participantName, setParticipantName] = useState("")
@@ -77,6 +75,76 @@ export default function VotePage({ params }: { params: { id: string } }) {
   const [dragStartSlot, setDragStartSlot] = useState<string | null>(null)
   const [dragMode, setDragMode] = useState<"select" | "deselect">("select")
   const tableRef = useRef<HTMLDivElement>(null)
+  
+  // 新增狀態管理
+  const [eventData, setEventData] = useState<Event | null>(null)
+  const [isLoading, setIsLoading] = useState(true)
+  const [isSubmitting, setIsSubmitting] = useState(false)
+  const [resolvedParams, setResolvedParams] = useState<{ id: string } | null>(null)
+  
+  // 根據日期範圍生成星期資訊
+  const generateWeekdays = (startDate: string, endDate: string) => {
+    const start = new Date(startDate)
+    const end = new Date(endDate)
+    const days: Array<{
+      key: string
+      dayKey: string
+      label: string
+      short: string
+      date: string
+      displayDate: string
+    }> = []
+    
+    const currentDate = new Date(start)
+    while (currentDate <= end) {
+      const dayOfWeek = currentDate.getDay()
+      const weekdayInfo = WEEKDAY_LABELS[dayOfWeek as keyof typeof WEEKDAY_LABELS]
+      
+      const dateStr = currentDate.toISOString().split('T')[0]
+      days.push({
+        key: dateStr, // 使用日期作為唯一 key
+        dayKey: weekdayInfo.key, // 保留原始的星期幾 key 用於邏輯判斷
+        label: weekdayInfo.label,
+        short: weekdayInfo.short,
+        date: dateStr, // YYYY-MM-DD format
+        displayDate: `${currentDate.getMonth() + 1}/${currentDate.getDate()}`,
+      })
+      
+      currentDate.setDate(currentDate.getDate() + 1)
+    }
+    
+    return days
+  }
+
+  // 動態生成的星期資訊
+  const weekdays = eventData ? generateWeekdays(eventData.startDate, eventData.endDate) : []
+
+  // 解析 params
+  useEffect(() => {
+    const resolveParams = async () => {
+      const resolved = await params
+      setResolvedParams(resolved)
+    }
+    resolveParams()
+  }, [params])
+
+  // 獲取活動資料
+  useEffect(() => {
+    if (resolvedParams) {
+      const fetchEventData = async () => {
+        try {
+          setIsLoading(true)
+          const event = await eventsApi.getById(resolvedParams.id)
+          setEventData(event)
+        } catch (error) {
+          console.error('獲取活動資料失敗:', error)
+        } finally {
+          setIsLoading(false)
+        }
+      }
+      fetchEventData()
+    }
+  }, [resolvedParams])
 
   const [isMobile, setIsMobile] = useState(false)
   const [showMobileView, setShowMobileView] = useState(false)
@@ -110,6 +178,7 @@ export default function VotePage({ params }: { params: { id: string } }) {
       } else {
         newSelection.add(slotKey)
       }
+      
 
       setSelectedSlots(newSelection)
     },
@@ -178,8 +247,8 @@ export default function VotePage({ params }: { params: { id: string } }) {
     const [startDay, startTime] = startSlot.split("-").slice(0, 2)
     const [endDay, endTime] = endSlot.split("-").slice(0, 2)
 
-    const startDayIndex = WEEKDAYS.findIndex((d) => d.key === startDay)
-    const endDayIndex = WEEKDAYS.findIndex((d) => d.key === endDay)
+    const startDayIndex = weekdays.findIndex((d) => d.dayKey === startDay)
+    const endDayIndex = weekdays.findIndex((d) => d.dayKey === endDay)
     const startTimeIndex = TIME_SLOTS.findIndex((t) => t.start === startTime)
     const endTimeIndex = TIME_SLOTS.findIndex((t) => t.start === endTime)
 
@@ -191,7 +260,7 @@ export default function VotePage({ params }: { params: { id: string } }) {
     const slots: string[] = []
     for (let dayIdx = minDayIndex; dayIdx <= maxDayIndex; dayIdx++) {
       for (let timeIdx = minTimeIndex; timeIdx <= maxTimeIndex; timeIdx++) {
-        slots.push(getSlotKey(WEEKDAYS[dayIdx].key, TIME_SLOTS[timeIdx]))
+        slots.push(getSlotKey(weekdays[dayIdx].dayKey, TIME_SLOTS[timeIdx]))
       }
     }
 
@@ -203,9 +272,9 @@ export default function VotePage({ params }: { params: { id: string } }) {
     const workingSlots = new Set<string>()
     const workingTimeSlots = TIME_SLOTS.filter((slot) => slot.start >= "09:00" && slot.start < "18:00")
 
-    WEEKDAYS.forEach((day) => {
+    weekdays.forEach((day) => {
       workingTimeSlots.forEach((timeSlot) => {
-        workingSlots.add(getSlotKey(day.key, timeSlot))
+        workingSlots.add(getSlotKey(day.dayKey, timeSlot))
       })
     })
 
@@ -252,7 +321,7 @@ export default function VotePage({ params }: { params: { id: string } }) {
     selectedSlots.forEach((slot) => {
       const parts = slot.split("-")
       const day = parts[0]
-      const dayLabel = WEEKDAYS.find((d) => d.key === day)?.label || day
+      const dayLabel = weekdays.find((d) => d.dayKey === day)?.label || day
 
       if (!summary[dayLabel]) {
         summary[dayLabel] = []
@@ -268,7 +337,7 @@ export default function VotePage({ params }: { params: { id: string } }) {
     return mergedSummary
   }
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     if (!participantName.trim()) {
       alert("請輸入您的暱稱")
       return
@@ -277,11 +346,48 @@ export default function VotePage({ params }: { params: { id: string } }) {
       alert("請至少選擇一個可參加的時段")
       return
     }
+    if (!resolvedParams || !eventData) {
+      alert("活動資料載入中，請稍後再試")
+      return
+    }
 
-    alert(`感謝 ${participantName} 的參與！已記錄您選擇的 ${selectedSlots.size} 個時段。`)
+    setIsSubmitting(true)
+    try {
+      // 1. 先建立參與者
+      const participant = await participantsApi.create(resolvedParams.id, {
+        name: participantName,
+      })
+
+      // 2. 提交時間投票
+      const timeSlots = convertSelectedSlotsToTimeSlots(selectedSlots)
+      await votesApi.create(resolvedParams.id, {
+        participantId: participant.id,
+        timeSlots,
+      })
+
+      // 3. 跳轉到結果頁面
+      router.push(`/results/${resolvedParams.id}`)
+    } catch (error) {
+      console.error('提交投票失敗:', error)
+      alert(error instanceof Error ? error.message : '提交失敗，請稍後再試')
+    } finally {
+      setIsSubmitting(false)
+    }
   }
 
   const selectionSummary = getSelectionSummary()
+
+  // 加載狀態
+  if (isLoading || !eventData) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-teal-600 mx-auto mb-4"></div>
+          <p className="text-slate-600">載入活動資料中...</p>
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50">
@@ -302,16 +408,16 @@ export default function VotePage({ params }: { params: { id: string } }) {
             <CardHeader>
               <div className="flex items-start justify-between">
                 <div>
-                  <CardTitle className="text-2xl text-slate-800 mb-2">{mockEvent.name}</CardTitle>
-                  <CardDescription className="text-slate-600 text-base mb-4">{mockEvent.description}</CardDescription>
+                  <CardTitle className="text-2xl text-slate-800 mb-2">{eventData?.name}</CardTitle>
+                  <CardDescription className="text-slate-600 text-base mb-4">{eventData?.description}</CardDescription>
                   <div className="flex flex-wrap gap-3">
                     <Badge variant="secondary" className="bg-teal-100 text-teal-700">
                       <Calendar className="w-4 h-4 mr-1" />
-                      {mockEvent.dateRange}
+                      {eventData?.startDate} 至 {eventData?.endDate}
                     </Badge>
                     <Badge variant="secondary" className="bg-blue-100 text-blue-700">
                       <Clock className="w-4 h-4 mr-1" />
-                      {mockEvent.timeRange}
+                      {eventData?.startTime} - {eventData?.endTime}
                     </Badge>
                   </div>
                 </div>
@@ -394,10 +500,10 @@ export default function VotePage({ params }: { params: { id: string } }) {
                       {/* 日期選擇器 */}
                       <div className="bg-slate-50 rounded-lg p-4">
                         <h4 className="text-sm font-medium text-slate-700 mb-3">選擇日期</h4>
-                        <div className="grid grid-cols-5 gap-2">
-                          {WEEKDAYS.map((weekday) => {
+                        <div className="grid gap-2" style={{ gridTemplateColumns: `repeat(${weekdays.length}, 1fr)` }}>
+                          {weekdays.map((weekday) => {
                             const daySlots = TIME_SLOTS.filter((slot) =>
-                              selectedSlots.has(getSlotKey(weekday.key, slot)),
+                              selectedSlots.has(getSlotKey(weekday.dayKey, slot)),
                             ).length
 
                             return (
@@ -427,13 +533,13 @@ export default function VotePage({ params }: { params: { id: string } }) {
 
                       {/* 時間段列表 */}
                       <div className="space-y-6">
-                        {WEEKDAYS.map((weekday) => (
-                          <div key={weekday.key} id={`mobile-day-${weekday.key}`} className="space-y-3">
+                        {weekdays.map((weekday) => (
+                          <div key={weekday.key} id={`mobile-day-${weekday.dayKey}`} className="space-y-3">
                             <div className="sticky top-0 bg-white/90 backdrop-blur-sm py-2 border-b border-slate-200">
                               <h4 className="text-lg font-semibold text-slate-800 flex items-center justify-between">
                                 {weekday.label}
                                 <Badge variant="outline" className="bg-teal-50 text-teal-700 border-teal-200">
-                                  {TIME_SLOTS.filter((slot) => selectedSlots.has(getSlotKey(weekday.key, slot))).length}{" "}
+                                  {TIME_SLOTS.filter((slot) => selectedSlots.has(getSlotKey(weekday.dayKey, slot))).length}{" "}
                                   / {TIME_SLOTS.length}
                                 </Badge>
                               </h4>
@@ -442,7 +548,7 @@ export default function VotePage({ params }: { params: { id: string } }) {
                             {/* 時間段網格 */}
                             <div className="grid grid-cols-2 gap-2">
                               {TIME_SLOTS.map((timeSlot) => {
-                                const slotKey = getSlotKey(weekday.key, timeSlot)
+                                const slotKey = getSlotKey(weekday.dayKey, timeSlot)
                                 const isSelected = selectedSlots.has(slotKey)
 
                                 return (
@@ -455,8 +561,8 @@ export default function VotePage({ params }: { params: { id: string } }) {
                           ? "bg-gradient-to-r from-emerald-400 to-green-500 border-emerald-500 text-white shadow-md"
                           : "bg-white border-slate-300 text-slate-700 hover:bg-slate-50 hover:border-slate-400 active:bg-slate-100"
                       }
-                    `}
-                                    onClick={() => handleSlotClick(weekday.key, timeSlot)}
+                                                        `}
+                                    onClick={() => handleSlotClick(weekday.dayKey, timeSlot)}
                                     style={{ minHeight: "60px" }}
                                   >
                                     <div className="text-sm font-medium">{timeSlot.start}</div>
@@ -492,7 +598,7 @@ export default function VotePage({ params }: { params: { id: string } }) {
                                 }}
                                 className="text-xs bg-orange-50 text-orange-700 border-orange-200 hover:bg-orange-100"
                               >
-                                🌅 上午
+                                上午
                               </Button>
                               <Button
                                 size="sm"
@@ -507,9 +613,10 @@ export default function VotePage({ params }: { params: { id: string } }) {
                                   })
                                   setSelectedSlots(newSelection)
                                 }}
+                              
                                 className="text-xs bg-yellow-50 text-yellow-700 border-yellow-200 hover:bg-yellow-100"
                               >
-                                ☀️ 下午
+                                下午
                               </Button>
                               <Button
                                 size="sm"
@@ -524,7 +631,7 @@ export default function VotePage({ params }: { params: { id: string } }) {
                                 }}
                                 className="text-xs bg-indigo-50 text-indigo-700 border-indigo-200 hover:bg-indigo-100"
                               >
-                                🌙 晚上
+                                晚上
                               </Button>
                               <Button
                                 size="sm"
@@ -578,9 +685,9 @@ export default function VotePage({ params }: { params: { id: string } }) {
                         <p className="text-slate-600">點選時間格子可參加的時間，可以選擇多個時段</p>
                       </div>
 
-                      {WEEKDAYS.map((weekday, dayIndex) => {
+                      {weekdays.map((weekday, dayIndex) => {
                         const selectedCount = TIME_SLOTS.filter((slot) =>
-                          selectedSlots.has(getSlotKey(weekday.key, slot)),
+                          selectedSlots.has(getSlotKey(weekday.dayKey, slot)),
                         ).length
 
                         return (
@@ -593,7 +700,7 @@ export default function VotePage({ params }: { params: { id: string } }) {
                                   </div>
                                   <div>
                                     <h3 className="text-lg font-semibold text-slate-800">
-                                      2024-01-{15 + dayIndex} ({weekday.label})
+                                      {weekday.displayDate} ({weekday.label})
                                     </h3>
                                     <p className="text-sm text-slate-500">已選擇 {selectedCount} 個時段</p>
                                   </div>
@@ -605,7 +712,7 @@ export default function VotePage({ params }: { params: { id: string } }) {
                                     onClick={() => {
                                       const newSelection = new Set(selectedSlots)
                                       TIME_SLOTS.forEach((slot) => {
-                                        newSelection.add(getSlotKey(weekday.key, slot))
+                                        newSelection.add(getSlotKey(weekday.dayKey, slot))
                                       })
                                       setSelectedSlots(newSelection)
                                     }}
@@ -619,7 +726,7 @@ export default function VotePage({ params }: { params: { id: string } }) {
                                     onClick={() => {
                                       const newSelection = new Set(selectedSlots)
                                       TIME_SLOTS.forEach((slot) => {
-                                        newSelection.delete(getSlotKey(weekday.key, slot))
+                                        newSelection.delete(getSlotKey(weekday.dayKey, slot))
                                       })
                                       setSelectedSlots(newSelection)
                                     }}
@@ -633,7 +740,7 @@ export default function VotePage({ params }: { params: { id: string } }) {
                             <CardContent>
                               <div className="grid grid-cols-4 sm:grid-cols-6 md:grid-cols-8 lg:grid-cols-10 gap-2">
                                 {TIME_SLOTS.map((timeSlot) => {
-                                  const slotKey = getSlotKey(weekday.key, timeSlot)
+                                  const slotKey = getSlotKey(weekday.dayKey, timeSlot)
                                   const isSelected = selectedSlots.has(slotKey)
 
                                   return (
@@ -649,7 +756,7 @@ export default function VotePage({ params }: { params: { id: string } }) {
                       focus:outline-none focus:ring-2 focus:ring-teal-500 focus:ring-offset-2
                       active:scale-95
                     `}
-                                      onClick={() => handleSlotClick(weekday.key, timeSlot)}
+                                      onClick={() => handleSlotClick(weekday.dayKey, timeSlot)}
                                       title={`${weekday.label} ${timeSlot.label}`}
                                     >
                                       {timeSlot.start}
@@ -669,7 +776,7 @@ export default function VotePage({ params }: { params: { id: string } }) {
                                     )
                                     const newSelection = new Set(selectedSlots)
                                     morningSlots.forEach((slot) => {
-                                      newSelection.add(getSlotKey(weekday.key, slot))
+                                      newSelection.add(getSlotKey(weekday.dayKey, slot))
                                     })
                                     setSelectedSlots(newSelection)
                                   }}
@@ -686,7 +793,7 @@ export default function VotePage({ params }: { params: { id: string } }) {
                                     )
                                     const newSelection = new Set(selectedSlots)
                                     afternoonSlots.forEach((slot) => {
-                                      newSelection.add(getSlotKey(weekday.key, slot))
+                                      newSelection.add(getSlotKey(weekday.dayKey, slot))
                                     })
                                     setSelectedSlots(newSelection)
                                   }}
@@ -701,7 +808,7 @@ export default function VotePage({ params }: { params: { id: string } }) {
                                     const eveningSlots = TIME_SLOTS.filter((slot) => slot.start >= "18:00")
                                     const newSelection = new Set(selectedSlots)
                                     eveningSlots.forEach((slot) => {
-                                      newSelection.add(getSlotKey(weekday.key, slot))
+                                      newSelection.add(getSlotKey(weekday.dayKey, slot))
                                     })
                                     setSelectedSlots(newSelection)
                                   }}
@@ -723,19 +830,20 @@ export default function VotePage({ params }: { params: { id: string } }) {
                       onMouseUp={handleMouseUp}
                       onMouseLeave={handleMouseUp}
                     >
-                      <div className="min-w-[800px]">
+                      <div className="min-w-[600px]" style={{ minWidth: `${Math.max(600, weekdays.length * 120)}px` }}>
                         {/* 表頭 - 星期（橫排） */}
-                        <div className="grid gap-1 mb-2" style={{ gridTemplateColumns: "80px repeat(5, 1fr)" }}>
+                        <div className="grid gap-1 mb-2" style={{ gridTemplateColumns: `80px repeat(${weekdays.length}, 1fr)` }}>
                           <div className="h-12 flex items-center justify-center text-sm font-semibold text-slate-700 bg-slate-100 rounded border">
                             時間 / 日期
                           </div>
-                          {WEEKDAYS.map((weekday) => (
+                          {weekdays.map((weekday) => (
                             <div
                               key={weekday.key}
                               className="h-12 flex items-center justify-center text-sm font-semibold text-slate-700 bg-teal-50 rounded border border-teal-200"
                             >
                               <span className="hidden sm:inline">{weekday.label}</span>
                               <span className="sm:hidden">{weekday.short}</span>
+                              <div className="text-xs text-slate-500 mt-1">{weekday.displayDate}</div>
                             </div>
                           ))}
                         </div>
@@ -745,7 +853,7 @@ export default function VotePage({ params }: { params: { id: string } }) {
                           <div
                             key={timeSlot.label}
                             className="grid gap-1 mb-1"
-                            style={{ gridTemplateColumns: "80px repeat(5, 1fr)" }}
+                            style={{ gridTemplateColumns: `80px repeat(${weekdays.length}, 1fr)` }}
                           >
                             {/* 時間刻度標籤（左側直列） */}
                             <div className="h-10 flex items-center justify-center text-xs font-medium text-slate-700 bg-slate-100 rounded border">
@@ -757,8 +865,8 @@ export default function VotePage({ params }: { params: { id: string } }) {
                             </div>
 
                             {/* 時間格子 */}
-                            {WEEKDAYS.map((weekday) => {
-                              const slotKey = getSlotKey(weekday.key, timeSlot)
+                            {weekdays.map((weekday) => {
+                              const slotKey = getSlotKey(weekday.dayKey, timeSlot)
                               const isSelected = selectedSlots.has(slotKey)
 
                               return (
@@ -773,9 +881,9 @@ export default function VotePage({ params }: { params: { id: string } }) {
                   }
                   select-none
                 `}
-                                  onClick={() => handleSlotClick(weekday.key, timeSlot)}
-                                  onMouseDown={() => handleMouseDown(weekday.key, timeSlot)}
-                                  onMouseEnter={() => handleMouseEnter(weekday.key, timeSlot)}
+                                  onClick={() => handleSlotClick(weekday.dayKey, timeSlot)}
+                                  onMouseDown={() => handleMouseDown(weekday.dayKey, timeSlot)}
+                                  onMouseEnter={() => handleMouseEnter(weekday.dayKey, timeSlot)}
                                   title={`${weekday.label} ${timeSlot.label}`}
                                 >
                                   {isSelected ? (
@@ -831,9 +939,9 @@ export default function VotePage({ params }: { params: { id: string } }) {
                     <Button
                       onClick={handleSubmit}
                       className="w-full bg-gradient-to-r from-teal-500 to-blue-600 hover:from-teal-600 hover:to-blue-700 text-white"
-                      disabled={!participantName.trim() || selectedSlots.size === 0}
+                      disabled={!participantName.trim() || selectedSlots.size === 0 || isSubmitting}
                     >
-                      提交可參加時間
+                      {isSubmitting ? '提交中...' : '提交可參加時間'}
                     </Button>
 
                     <p className="text-xs text-slate-500 text-center">提交後您可以查看統計結果</p>

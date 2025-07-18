@@ -7,7 +7,7 @@ import { Badge } from "@/components/ui/badge"
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { MousePointer, Move, Clock, Calendar, BarChart3 } from "lucide-react"
 
-// 時間段定義（7:00 - 21:00，每30分鐘一格）
+// 時間段定義（7:00 - 24:00，每30分鐘一格）
 const TIME_SLOTS = [
   { start: "07:00", end: "07:30", label: "07:00-07:30" },
   { start: "07:30", end: "08:00", label: "07:30-08:00" },
@@ -37,6 +37,12 @@ const TIME_SLOTS = [
   { start: "19:30", end: "20:00", label: "19:30-20:00" },
   { start: "20:00", end: "20:30", label: "20:00-20:30" },
   { start: "20:30", end: "21:00", label: "20:30-21:00" },
+  { start: "21:00", end: "21:30", label: "21:00-21:30" },
+  { start: "21:30", end: "22:00", label: "21:30-22:00" },
+  { start: "22:00", end: "22:30", label: "22:00-22:30" },
+  { start: "22:30", end: "23:00", label: "22:30-23:00" },
+  { start: "23:00", end: "23:30", label: "23:00-23:30" },
+  { start: "23:30", end: "24:00", label: "23:30-24:00" },
 ]
 
 // 星期定義
@@ -502,9 +508,9 @@ export default function TimeSelector({ onSelectionChange, initialSelection = new
         <Card className="shadow-sm border-slate-200">
           <CardContent className="p-6">
             <div ref={tableRef} className="overflow-x-auto" onMouseUp={handleMouseUp} onMouseLeave={handleMouseUp}>
-              <div className="min-w-[1200px]">
+              <div className="min-w-[1600px]">
                 {/* 表頭 - 時間段 */}
-                <div className="grid gap-1 mb-2" style={{ gridTemplateColumns: "80px repeat(24, 1fr)" }}>
+                <div className="grid gap-1 mb-2" style={{ gridTemplateColumns: "80px repeat(34, 1fr)" }}>
                   <div className="h-12"></div> {/* 空白角落 */}
                   {TIME_SLOTS.map((timeSlot) => (
                     <div
@@ -523,7 +529,7 @@ export default function TimeSelector({ onSelectionChange, initialSelection = new
                   <div
                     key={weekday.key}
                     className="grid gap-1 mb-1"
-                    style={{ gridTemplateColumns: "80px repeat(24, 1fr)" }}
+                    style={{ gridTemplateColumns: "80px repeat(34, 1fr)" }}
                   >
                     {/* 星期標籤 */}
                     <div className="h-14 flex items-center justify-center text-sm font-medium text-slate-700 bg-slate-50 rounded">
