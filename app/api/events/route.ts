@@ -1,77 +1,63 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { z } from 'zod'
-import { prisma } from '@/lib/prisma'
-
-// 驗證建立活動的請求資料
-const createEventSchema = z.object({
-  name: z.string().min(1, '活動名稱不能為空'),
-  description: z.string().optional(),
-  startDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, '日期格式錯誤'),
-  endDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, '日期格式錯誤'),
-  startTime: z.string().regex(/^\d{2}:\d{2}$/, '時間格式錯誤'),
-  endTime: z.string().regex(/^\d{2}:\d{2}$/, '時間格式錯誤'),
-})
+import { SupabaseService } from '@/lib/supabase-service'
 
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
-    
-    // 驗證請求資料
-    const validatedData = createEventSchema.parse(body)
-    
-    // 建立活動
-    const event = await prisma.event.create({
-      data: {
-        name: validatedData.name,
-        description: validatedData.description,
-        startDate: validatedData.startDate,
-        endDate: validatedData.endDate,
-        startTime: validatedData.startTime,
-        endTime: validatedData.endTime,
-      },
-    })
-    
-    return NextResponse.json(event, { status: 201 })
-    
-  } catch (error) {
-    console.error('建立活動失敗:', error)
-    
-    if (error instanceof z.ZodError) {
+    const { name, description, startDate, endDate, startTime, endTime } = body
+
+    // 驗證必要欄位
+    if (!name || !startDate || !endDate || !startTime || !endTime) {
       return NextResponse.json(
-        { error: '資料驗證失敗', details: error.errors },
+        { error: 'Missing required fields' },
         { status: 400 }
       )
     }
-    
+
+    // 創建會議
+    const event = await SupabaseService.createEvent({
+      name,
+      description,
+      start_date: startDate,
+      end_date: endDate,
+      start_time: startTime,
+      end_time: endTime
+    })
+
+    if (!event) {
+      return NextResponse.json(
+        { error: 'Failed to create event' },
+        { status: 500 }
+      )
+    }
+
+    return NextResponse.json(event, { status: 201 })
+  } catch (error) {
+    console.error('Error creating event:', error)
     return NextResponse.json(
-      { error: '建立活動失敗' },
+      { error: 'Internal server error' },
       { status: 500 }
     )
   }
 }
 
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
-    const events = await prisma.event.findMany({
-      include: {
-        participants: true,
-        _count: {
-          select: {
-            participants: true,
-          },
-        },
-      },
-      orderBy: {
-        createdAt: 'desc',
-      },
-    })
-    
+    const { searchParams } = new URL(request.url)
+    const query = searchParams.get('q')
+
+    let events
+    if (query) {
+      events = await SupabaseService.searchEvents(query)
+    } else {
+      events = await SupabaseService.getEvents()
+    }
+
     return NextResponse.json(events)
-    
   } catch (error) {
-    console.error('獲取活動清單失敗:', error)
+    console.error('Error getting events:', error)
     return NextResponse.json(
-      { error: '獲取活動清單失敗' },
+      { error: 'Internal server error' },
       { status: 500 }
     )
   }

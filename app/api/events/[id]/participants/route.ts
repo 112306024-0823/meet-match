@@ -1,59 +1,42 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { z } from 'zod'
-import { prisma } from '@/lib/prisma'
-
-// 驗證新增參與者的請求資料
-const createParticipantSchema = z.object({
-  name: z.string().min(1, '姓名不能為空'),
-  email: z.string().email('email 格式錯誤').optional(),
-})
+import { SupabaseService } from '@/lib/supabase-service'
 
 export async function POST(
   request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
+  { params }: { params: { id: string } }
 ) {
   try {
-    const { id: eventId } = await params
+    const { id: eventId } = params
     const body = await request.json()
-    
-    // 驗證請求資料
-    const validatedData = createParticipantSchema.parse(body)
-    
-    // 確認活動存在
-    const event = await prisma.event.findUnique({
-      where: { id: eventId },
-    })
-    
-    if (!event) {
+    const { name, email } = body
+
+    // 驗證必要欄位
+    if (!name) {
       return NextResponse.json(
-        { error: '找不到此活動' },
-        { status: 404 }
-      )
-    }
-    
-    // 建立參與者
-    const participant = await prisma.participant.create({
-      data: {
-        eventId,
-        name: validatedData.name,
-        email: validatedData.email,
-      },
-    })
-    
-    return NextResponse.json(participant, { status: 201 })
-    
-  } catch (error) {
-    console.error('新增參與者失敗:', error)
-    
-    if (error instanceof z.ZodError) {
-      return NextResponse.json(
-        { error: '資料驗證失敗', details: error.errors },
+        { error: 'Name is required' },
         { status: 400 }
       )
     }
-    
+
+    // 創建參與者
+    const participant = await SupabaseService.createParticipant({
+      event_id: eventId,
+      name,
+      email
+    })
+
+    if (!participant) {
+      return NextResponse.json(
+        { error: 'Failed to create participant' },
+        { status: 500 }
+      )
+    }
+
+    return NextResponse.json(participant, { status: 201 })
+  } catch (error) {
+    console.error('Error creating participant:', error)
     return NextResponse.json(
-      { error: '新增參與者失敗' },
+      { error: 'Internal server error' },
       { status: 500 }
     )
   }
@@ -61,24 +44,19 @@ export async function POST(
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
+  { params }: { params: { id: string } }
 ) {
   try {
-    const { id: eventId } = await params
-    
-    const participants = await prisma.participant.findMany({
-      where: { eventId },
-      orderBy: {
-        joinedAt: 'desc',
-      },
-    })
-    
+    const { id: eventId } = params
+
+    // 獲取會議的所有參與者
+    const participants = await SupabaseService.getEventParticipants(eventId)
+
     return NextResponse.json(participants)
-    
   } catch (error) {
-    console.error('獲取參與者清單失敗:', error)
+    console.error('Error getting participants:', error)
     return NextResponse.json(
-      { error: '獲取參與者清單失敗' },
+      { error: 'Internal server error' },
       { status: 500 }
     )
   }

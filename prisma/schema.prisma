@@ -6,8 +6,8 @@ generator client {
 }
 
 datasource db {
-  provider = "sqlite"
-  url      = "file:./dev.db"
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
 }
 
 model Event {
@@ -24,6 +24,7 @@ model Event {
   // 關聯
   participants Participant[]
   timeSlots    TimeSlot[]
+  votes        Vote[]
 
   @@map("events")
 }
@@ -38,6 +39,7 @@ model Participant {
   // 關聯
   event     Event      @relation(fields: [eventId], references: [id], onDelete: Cascade)
   timeSlots TimeSlot[]
+  votes     Vote[]
 
   @@map("participants")
 }
@@ -54,6 +56,36 @@ model TimeSlot {
   // 關聯
   event       Event       @relation(fields: [eventId], references: [id], onDelete: Cascade)
   participant Participant @relation(fields: [participantId], references: [id], onDelete: Cascade)
+  votes       Vote[]
 
   @@map("time_slots")
+}
+
+model Vote {
+  id            String   @id @default(cuid())
+  eventId       String
+  participantId String
+  timeSlotId    String
+  voteType      String   // yes, no, maybe
+  createdAt     DateTime @default(now())
+
+  // 關聯
+  event       Event       @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  participant Participant @relation(fields: [participantId], references: [id], onDelete: Cascade)
+  timeSlot   TimeSlot    @relation(fields: [timeSlotId], references: [id], onDelete: Cascade)
+
+  // 唯一約束：每個參與者對每個時間段只能投票一次
+  @@unique([participantId, timeSlotId])
+  @@map("votes")
+}
+
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  name      String?
+  avatarUrl String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("users")
 } 

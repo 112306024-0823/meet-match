@@ -5,6 +5,7 @@
 [![Next.js](https://img.shields.io/badge/Next.js-14-black?style=for-the-badge&logo=next.js)](https://nextjs.org/)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5-blue?style=for-the-badge&logo=typescript)](https://www.typescriptlang.org/)
 [![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-3-38B2AC?style=for-the-badge&logo=tailwind-css)](https://tailwindcss.com/)
+[![Supabase](https://img.shields.io/badge/Supabase-3ECF8E?style=for-the-badge&logo=supabase&logoColor=white)](https://supabase.com/)
 
 ## 📋 專案概述
 
@@ -44,53 +45,80 @@ MeetMatch 是一個智能會議時間協調平台，幫助團隊和個人輕鬆�
 
 ### 後端技術
 - **Next.js API Routes**: 全棧開發，API 和前端統一
+- **Supabase**: 現代化的後端即服務平台
+- **PostgreSQL**: 強大的關聯式資料庫
 - **Prisma**: 現代化的資料庫 ORM
-- **SQLite**: 輕量級資料庫，適合開發和測試
 
 ### 開發工具
 - **ESLint**: 程式碼品質檢查
 - **Prettier**: 程式碼格式化
-- **pnpm**: 快速的套件管理器
+- **npm**: 套件管理器
 
 ## 🚀 快速開始
 
 ### 環境需求
 - Node.js 18.0 或更高版本
-- pnpm 8.0 或更高版本
+- npm 8.0 或更高版本
+
+### Supabase 設定
+
+1. **創建 Supabase 專案**
+   - 前往 [Supabase](https://supabase.com/) 創建新專案
+   - 記下專案 URL 和匿名金鑰
+
+2. **設定環境變數**
+   ```bash
+   # 複製環境變數範例檔案
+   cp .env.example .env.local
+   
+   # 編輯 .env.local 檔案，填入您的 Supabase 資訊
+   NEXT_PUBLIC_SUPABASE_URL=your_supabase_project_url
+   NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
+   DATABASE_URL=your_supabase_database_url
+   ```
 
 ### 安裝步驟
 
 1. **克隆專案**
 ```bash
-git clone <repository-url>
+git clone https://github.com/112306024-0823/meet-match.git
 cd meet-match
 ```
 
 2. **安裝依賴**
 ```bash
-pnpm install
+npm install
 ```
 
 3. **環境設定**
 ```bash
+# 複製並編輯環境變數檔案
 cp .env.example .env.local
 # 編輯 .env.local 檔案，設定必要的環境變數
 ```
 
 4. **資料庫設定**
 ```bash
-pnpm prisma generate
-pnpm prisma db push
+# 生成 Prisma 客戶端
+npm run db:generate
+
+# 推送資料庫 schema 到 Supabase
+npm run db:push
 ```
 
 5. **啟動開發伺服器**
 ```bash
-pnpm dev
+npm run dev
 ```
 
 6. **開啟瀏覽器**
 ```
 http://localhost:3000
+```
+
+7. **測試 Supabase 連接**
+```
+http://localhost:3000/api/test-supabase
 ```
 
 ## 📁 專案結構
@@ -99,6 +127,7 @@ http://localhost:3000
 meet-match/
 ├── app/                    # Next.js App Router 頁面
 │   ├── api/               # API 路由
+│   │   └── test-supabase/ # Supabase 連接測試
 │   ├── auth/              # 認證相關頁面
 │   ├── create/            # 創建會議頁面
 │   ├── my-invites/        # 我的邀請頁面
@@ -109,9 +138,24 @@ meet-match/
 │   └── theme-provider.tsx # 主題提供者
 ├── hooks/                 # 自定義 React Hooks
 ├── lib/                   # 工具函數和配置
+│   └── supabase.ts       # Supabase 客戶端配置
 ├── prisma/               # 資料庫 schema 和遷移
 └── public/               # 靜態資源
 ```
+
+## 🗄️ 資料庫結構
+
+### 主要資料表
+- **events**: 會議資訊
+- **participants**: 參與者資訊
+- **time_slots**: 時間段選擇
+- **votes**: 投票記錄
+- **users**: 用戶資訊
+
+### 關聯關係
+- 一個會議可以有多個參與者
+- 一個參與者可以選擇多個時間段
+- 每個參與者對每個時間段可以投票一次
 
 ## 🔧 開發指南
 
@@ -130,10 +174,10 @@ meet-match/
 ### 測試
 ```bash
 # 執行測試
-pnpm test
+npm test
 
 # 執行測試並監控
-pnpm test:watch
+npm run test:watch
 ```
 
 ## 🌐 部署
@@ -148,10 +192,10 @@ pnpm test:watch
 ### 其他平台部署
 ```bash
 # 建置生產版本
-pnpm build
+npm run build
 
 # 啟動生產伺服器
-pnpm start
+npm start
 ```
 
 ## 📈 效能優化
@@ -164,9 +208,10 @@ pnpm start
 ## 🔒 安全性
 
 - **輸入驗證**: 所有用戶輸入都經過驗證
-- **SQL 注入防護**: 使用 Prisma ORM 防止 SQL 注入
+- **SQL 注入防護**: 使用 Supabase 和 Prisma ORM 防止 SQL 注入
 - **XSS 防護**: 實作適當的 XSS 防護措施
 - **CORS 配置**: 正確配置跨域資源共享
+- **Row Level Security**: 使用 Supabase RLS 政策
 
 ## 🤝 貢獻指南
 
@@ -191,8 +236,10 @@ pnpm start
 - [Next.js](https://nextjs.org/) - 優秀的 React 框架
 - [Tailwind CSS](https://tailwindcss.com/) - 實用的 CSS 框架
 - [Shadcn/ui](https://ui.shadcn.com/) - 高品質的組件庫
+- [Supabase](https://supabase.com/) - 現代化的後端即服務平台
 - [Prisma](https://www.prisma.io/) - 現代化的資料庫 ORM
 
 ---
 
 ⭐ 如果這個專案對您有幫助，請給我們一個 Star！
+
