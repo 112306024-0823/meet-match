@@ -1,30 +1,198 @@
-# MeetMatch UI Design
-
-*Automatically synced with your [v0.dev](https://v0.dev) deployments*
+# MeetMatch - 智能會議時間協調平台
 
 [![Deployed on Vercel](https://img.shields.io/badge/Deployed%20on-Vercel-black?style=for-the-badge&logo=vercel)](https://vercel.com/yukiyang0823-2781s-projects/v0-meet-match-ui-design)
 [![Built with v0](https://img.shields.io/badge/Built%20with-v0.dev-black?style=for-the-badge)](https://v0.dev/chat/projects/V9Pil1oyXdb)
+[![Next.js](https://img.shields.io/badge/Next.js-14-black?style=for-the-badge&logo=next.js)](https://nextjs.org/)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5-blue?style=for-the-badge&logo=typescript)](https://www.typescriptlang.org/)
+[![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-3-38B2AC?style=for-the-badge&logo=tailwind-css)](https://tailwindcss.com/)
 
-## Overview
+## 📋 專案概述
 
-This repository will stay in sync with your deployed chats on [v0.dev](https://v0.dev).
-Any changes you make to your deployed app will be automatically pushed to this repository from [v0.dev](https://v0.dev).
+MeetMatch 是一個智能會議時間協調平台，幫助團隊和個人輕鬆安排會議時間。透過直觀的用戶介面和智能算法，讓時間協調變得簡單高效。
 
-## Deployment
+## ✨ 主要功能
 
-Your project is live at:
+### 🗓️ 會議管理
+- **創建會議**: 快速建立新會議，設定標題、描述和時間選項
+- **時間選擇器**: 直觀的時間選擇介面，支援多個時間段選擇
+- **參與者管理**: 邀請參與者，追蹤回覆狀態
+- **投票系統**: 參與者對時間選項進行投票，民主化決策
 
-**[https://vercel.com/yukiyang0823-2781s-projects/v0-meet-match-ui-design](https://vercel.com/yukiyang0823-2781s-projects/v0-meet-match-ui-design)**
+### 👥 用戶系統
+- **用戶註冊/登入**: 安全的身份驗證系統
+- **個人資料管理**: 管理個人資訊和偏好設定
+- **邀請管理**: 查看和管理收到的會議邀請
 
-## Build your app
+### 📊 結果分析
+- **投票結果**: 即時顯示投票統計和結果
+- **最佳時間**: 自動計算最適合的會議時間
+- **參與者回覆**: 追蹤參與者的回覆狀態
 
-Continue building your app on:
+### 📱 響應式設計
+- **多設備支援**: 完美支援桌面、平板和手機
+- **現代化 UI**: 使用最新的設計語言和組件
+- **無障礙設計**: 符合 WCAG 標準的無障礙設計
 
-**[https://v0.dev/chat/projects/V9Pil1oyXdb](https://v0.dev/chat/projects/V9Pil1oyXdb)**
+## 🛠️ 技術架構
 
-## How It Works
+### 前端技術
+- **Next.js 14**: 使用 App Router 的現代化 React 框架
+- **React 18**: 最新的 React 版本，支援 Concurrent Features
+- **TypeScript 5**: 完整的類型安全開發
+- **Tailwind CSS 3**: 實用優先的 CSS 框架
+- **Shadcn/ui**: 高品質的 React 組件庫
 
-1. Create and modify your project using [v0.dev](https://v0.dev)
-2. Deploy your chats from the v0 interface
-3. Changes are automatically pushed to this repository
-4. Vercel deploys the latest version from this repository
+### 後端技術
+- **Next.js API Routes**: 全棧開發，API 和前端統一
+- **Prisma**: 現代化的資料庫 ORM
+- **SQLite**: 輕量級資料庫，適合開發和測試
+
+### 開發工具
+- **ESLint**: 程式碼品質檢查
+- **Prettier**: 程式碼格式化
+- **pnpm**: 快速的套件管理器
+
+## 🚀 快速開始
+
+### 環境需求
+- Node.js 18.0 或更高版本
+- pnpm 8.0 或更高版本
+
+### 安裝步驟
+
+1. **克隆專案**
+```bash
+git clone <repository-url>
+cd meet-match
+```
+
+2. **安裝依賴**
+```bash
+pnpm install
+```
+
+3. **環境設定**
+```bash
+cp .env.example .env.local
+# 編輯 .env.local 檔案，設定必要的環境變數
+```
+
+4. **資料庫設定**
+```bash
+pnpm prisma generate
+pnpm prisma db push
+```
+
+5. **啟動開發伺服器**
+```bash
+pnpm dev
+```
+
+6. **開啟瀏覽器**
+```
+http://localhost:3000
+```
+
+## 📁 專案結構
+
+```
+meet-match/
+├── app/                    # Next.js App Router 頁面
+│   ├── api/               # API 路由
+│   ├── auth/              # 認證相關頁面
+│   ├── create/            # 創建會議頁面
+│   ├── my-invites/        # 我的邀請頁面
+│   ├── results/           # 結果頁面
+│   └── vote/              # 投票頁面
+├── components/            # React 組件
+│   ├── ui/               # 基礎 UI 組件
+│   └── theme-provider.tsx # 主題提供者
+├── hooks/                 # 自定義 React Hooks
+├── lib/                   # 工具函數和配置
+├── prisma/               # 資料庫 schema 和遷移
+└── public/               # 靜態資源
+```
+
+## 🔧 開發指南
+
+### 新增功能
+1. 在 `app/` 目錄下創建新的頁面
+2. 在 `components/` 目錄下創建可重用組件
+3. 在 `lib/` 目錄下新增工具函數
+4. 更新 Prisma schema 如果需要新的資料模型
+
+### 程式碼規範
+- 使用 TypeScript 進行類型安全開發
+- 遵循 ESLint 和 Prettier 的程式碼規範
+- 組件使用 PascalCase 命名
+- 檔案使用 kebab-case 命名
+
+### 測試
+```bash
+# 執行測試
+pnpm test
+
+# 執行測試並監控
+pnpm test:watch
+```
+
+## 🌐 部署
+
+### Vercel 部署
+專案已配置為自動部署到 Vercel：
+
+1. 推送到 main 分支會自動觸發部署
+2. 每次部署都會生成預覽 URL
+3. 支援自動的環境變數管理
+
+### 其他平台部署
+```bash
+# 建置生產版本
+pnpm build
+
+# 啟動生產伺服器
+pnpm start
+```
+
+## 📈 效能優化
+
+- **圖片優化**: 使用 Next.js 的 Image 組件
+- **程式碼分割**: 自動的頁面級程式碼分割
+- **靜態生成**: 支援靜態頁面生成 (SSG)
+- **快取策略**: 實作適當的快取策略
+
+## 🔒 安全性
+
+- **輸入驗證**: 所有用戶輸入都經過驗證
+- **SQL 注入防護**: 使用 Prisma ORM 防止 SQL 注入
+- **XSS 防護**: 實作適當的 XSS 防護措施
+- **CORS 配置**: 正確配置跨域資源共享
+
+## 🤝 貢獻指南
+
+1. Fork 專案
+2. 創建功能分支 (`git checkout -b feature/AmazingFeature`)
+3. 提交變更 (`git commit -m 'Add some AmazingFeature'`)
+4. 推送到分支 (`git push origin feature/AmazingFeature`)
+5. 開啟 Pull Request
+
+## 📄 授權
+
+本專案採用 MIT 授權條款 - 詳見 [LICENSE](LICENSE) 檔案
+
+## 📞 聯絡資訊
+
+- **專案維護者**: [您的姓名]
+- **Email**: [您的 Email]
+- **專案連結**: [GitHub 連結]
+
+## 🙏 致謝
+
+- [Next.js](https://nextjs.org/) - 優秀的 React 框架
+- [Tailwind CSS](https://tailwindcss.com/) - 實用的 CSS 框架
+- [Shadcn/ui](https://ui.shadcn.com/) - 高品質的組件庫
+- [Prisma](https://www.prisma.io/) - 現代化的資料庫 ORM
+
+---
+
+⭐ 如果這個專案對您有幫助，請給我們一個 Star！
