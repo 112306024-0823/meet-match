@@ -9,7 +9,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Calendar, ArrowLeft, Clock } from "lucide-react"
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { eventsApi } from "@/lib/api"
 
@@ -24,6 +24,37 @@ export default function CreateInvitePage() {
     startTime: "09:00",
     endTime: "18:00",
   })
+
+  // 格式化為 YYYY-MM-DD
+  const formatDate = (date: Date): string => {
+    const y = date.getFullYear()
+    const m = `${date.getMonth() + 1}`.padStart(2, "0")
+    const d = `${date.getDate()}`.padStart(2, "0")
+    return `${y}-${m}-${d}`
+  }
+
+  // 取得本週一與本週日（以週一為一週開始）
+  const getCurrentWeekRange = (): { start: string; end: string } => {
+    const today = new Date()
+    const day = today.getDay() // 0=Sun,1=Mon,...
+    const diffToMonday = (day + 6) % 7 // 轉換成距週一的天數
+    const monday = new Date(today)
+    monday.setHours(0, 0, 0, 0)
+    monday.setDate(today.getDate() - diffToMonday)
+
+    const sunday = new Date(monday)
+    sunday.setDate(monday.getDate() + 6)
+
+    return { start: formatDate(monday), end: formatDate(sunday) }
+  }
+
+  // 掛載時預設日期為本週區間（若尚未選擇）
+  useEffect(() => {
+    if (!formData.startDate || !formData.endDate) {
+      const { start, end } = getCurrentWeekRange()
+      setFormData((prev) => ({ ...prev, startDate: start, endDate: end }))
+    }
+  }, [])
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { id, value } = e.target

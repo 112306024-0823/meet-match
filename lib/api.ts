@@ -4,12 +4,12 @@ export interface Event {
   id: string
   name: string
   description?: string
-  startDate: string
-  endDate: string
-  startTime: string
-  endTime: string
-  createdAt: string
-  updatedAt: string
+  start_date: string
+  end_date: string
+  start_time: string
+  end_time: string
+  created_at: string
+  updated_at: string
   participants?: Participant[]
   _count?: {
     participants: number
@@ -53,6 +53,12 @@ export interface CreateParticipantData {
 }
 
 export interface CreateVoteData {
+  participantId: string
+  timeSlotId: string
+  voteType: 'yes' | 'no' | 'maybe'
+}
+
+export interface SubmitTimeSlotsData {
   participantId: string
   timeSlots: {
     day: string
@@ -127,19 +133,35 @@ export const participantsApi = {
   },
 }
 
+// Time Slots API
+export const timeSlotsApi = {
+  // 提交時間段選擇
+  submit: async (eventId: string, data: SubmitTimeSlotsData): Promise<{ message: string; count: number; timeSlots: TimeSlot[] }> => {
+    return apiRequest<{ message: string; count: number; timeSlots: TimeSlot[] }>(`/api/events/${eventId}/submit-times`, {
+      method: 'POST',
+      body: JSON.stringify(data),
+    })
+  },
+
+  // 獲取活動的所有時間段
+  getByEventId: async (eventId: string): Promise<TimeSlot[]> => {
+    return apiRequest<TimeSlot[]>(`/api/events/${eventId}/time-slots`)
+  },
+}
+
 // Votes API
 export const votesApi = {
-  // 提交時間投票
-  create: async (eventId: string, data: CreateVoteData): Promise<{ message: string; count: number }> => {
-    return apiRequest<{ message: string; count: number }>(`/api/events/${eventId}/votes`, {
+  // 提交投票
+  create: async (eventId: string, data: CreateVoteData): Promise<any> => {
+    return apiRequest<any>(`/api/events/${eventId}/votes`, {
       method: 'POST',
       body: JSON.stringify(data),
     })
   },
 
   // 獲取活動的所有投票
-  getByEventId: async (eventId: string): Promise<TimeSlot[]> => {
-    return apiRequest<TimeSlot[]>(`/api/events/${eventId}/votes`)
+  getByEventId: async (eventId: string): Promise<any[]> => {
+    return apiRequest<any[]>(`/api/events/${eventId}/votes`)
   },
 }
 

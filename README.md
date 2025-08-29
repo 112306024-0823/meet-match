@@ -221,17 +221,8 @@ npm start
 4. 推送到分支 (`git push origin feature/AmazingFeature`)
 5. 開啟 Pull Request
 
-## 📄 授權
 
-本專案採用 MIT 授權條款 - 詳見 [LICENSE](LICENSE) 檔案
-
-## 📞 聯絡資訊
-
-- **專案維護者**: [您的姓名]
-- **Email**: [您的 Email]
-- **專案連結**: [GitHub 連結]
-
-## 🙏 致謝
+## 技術引用
 
 - [Next.js](https://nextjs.org/) - 優秀的 React 框架
 - [Tailwind CSS](https://tailwindcss.com/) - 實用的 CSS 框架
@@ -239,7 +230,5 @@ npm start
 - [Supabase](https://supabase.com/) - 現代化的後端即服務平台
 - [Prisma](https://www.prisma.io/) - 現代化的資料庫 ORM
 
----
 
-⭐ 如果這個專案對您有幫助，請給我們一個 Star！
 
