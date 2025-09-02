@@ -62,7 +62,7 @@ type SelectionMode = "click" | "drag"
 
 export default function VotePanel({ id }: { id: string }) {
   const router = useRouter()
-  const [mode, setMode] = useState<SelectionMode>("click")
+  const [mode, setMode] = useState<SelectionMode>("drag")
   const [selectedSlots, setSelectedSlots] = useState<Set<string>>(new Set())
   const [participantName, setParticipantName] = useState("")
   const [isDragging, setIsDragging] = useState(false)
