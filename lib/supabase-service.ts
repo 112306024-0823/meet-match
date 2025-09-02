@@ -156,6 +156,20 @@ export class SupabaseService {
     return data || []
   }
 
+  static async deleteTimeSlotsByParticipant(eventId: string, participantId: string): Promise<boolean> {
+    const { error } = await supabase
+      .from('time_slots')
+      .delete()
+      .eq('event_id', eventId)
+      .eq('participant_id', participantId)
+
+    if (error) {
+      console.error('Error deleting time slots:', error)
+      return false
+    }
+    return true
+  }
+
   // Votes
   static async createVote(vote: VoteInsert): Promise<Vote | null> {
     const { data, error } = await supabase

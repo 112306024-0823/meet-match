@@ -147,6 +147,13 @@ export const timeSlotsApi = {
   getByEventId: async (eventId: string): Promise<TimeSlot[]> => {
     return apiRequest<TimeSlot[]>(`/api/events/${eventId}/time-slots`)
   },
+
+  // 清除某位參與者在此活動的時間段
+  clearByParticipant: async (eventId: string, participantId: string): Promise<{ message: string }> => {
+    return apiRequest<{ message: string }>(`/api/events/${eventId}/time-slots?participantId=${participantId}`, {
+      method: 'DELETE',
+    })
+  },
 }
 
 // Votes API

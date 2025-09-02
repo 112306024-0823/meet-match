@@ -10,7 +10,6 @@ export async function POST(
     const body = await request.json()
     const { participantId, timeSlots } = body
 
-    // 驗證必要欄位
     if (!participantId || !timeSlots || !Array.isArray(timeSlots)) {
       return NextResponse.json(
         { error: 'Missing required fields' },
@@ -18,7 +17,6 @@ export async function POST(
       )
     }
 
-    // 創建多個時間段
     const createdTimeSlots = []
     for (const slot of timeSlots) {
       const timeSlot = await SupabaseService.createTimeSlot({
@@ -55,12 +53,45 @@ export async function GET(
   try {
     const { id: eventId } = params
 
-    // 獲取會議的所有時間段
     const timeSlots = await SupabaseService.getEventTimeSlots(eventId)
 
     return NextResponse.json(timeSlots)
   } catch (error) {
     console.error('Error getting time slots:', error)
+    return NextResponse.json(
+      { error: 'Internal server error' },
+      { status: 500 }
+    )
+  }
+}
+
+export async function DELETE(
+  request: NextRequest,
+  { params }: { params: { id: string } }
+) {
+  try {
+    const { id: eventId } = params
+    const { searchParams } = new URL(request.url)
+    const participantId = searchParams.get('participantId')
+
+    if (!participantId) {
+      return NextResponse.json(
+        { error: 'participantId is required' },
+        { status: 400 }
+      )
+    }
+
+    const ok = await SupabaseService.deleteTimeSlotsByParticipant(eventId, participantId)
+    if (!ok) {
+      return NextResponse.json(
+        { error: 'Failed to delete time slots' },
+        { status: 500 }
+      )
+    }
+
+    return NextResponse.json({ message: 'Time slots cleared' })
+  } catch (error) {
+    console.error('Error deleting time slots:', error)
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }

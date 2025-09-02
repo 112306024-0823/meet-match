@@ -69,10 +69,35 @@ export default function VotePanel({ id }: { id: string }) {
   const [dragStartSlot, setDragStartSlot] = useState<string | null>(null)
   const [dragMode, setDragMode] = useState<"select" | "deselect">("select")
   const tableRef = useRef<HTMLDivElement>(null)
+  const [existingParticipantId, setExistingParticipantId] = useState<string | null>(null)
 
   const [eventData, setEventData] = useState<Event | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [isSubmitting, setIsSubmitting] = useState(false)
+
+  // 當名稱輸入變動時，嘗試載入同名使用者既有時段
+  useEffect(() => {
+    const loadExisting = async () => {
+      if (!eventData || !participantName.trim()) return
+      // 取得全部 timeSlots，過濾出同名參與者
+      const slots = await timeSlotsApi.getByEventId(eventData.id)
+      // timeSlotsApi 回傳欄位為 snake_case，且 participant 內含 name
+      const mySlots = slots.filter((s: any) => s.participant?.name === participantName.trim())
+      if (mySlots.length === 0) {
+        setExistingParticipantId(null)
+        setSelectedSlots(new Set())
+        return
+      }
+      // 取得參與者 id
+      const pid = (mySlots[0] as any).participant_id || (mySlots[0] as any).participantId
+      setExistingParticipantId(pid || null)
+      // 將已選時段還原到畫面
+      const restored = new Set<string>()
+      mySlots.forEach((s: any) => restored.add(`${s.day}-${(s as any).time_start || (s as any).timeStart}-${(s as any).time_end || (s as any).timeEnd}`))
+      setSelectedSlots(restored)
+    }
+    loadExisting()
+  }, [participantName, eventData])
 
   const generateWeekdays = (startDate: string, endDate: string) => {
     const start = new Date(startDate)
@@ -115,15 +140,17 @@ export default function VotePanel({ id }: { id: string }) {
 
   const handleSlotClick = useCallback((day: string, timeSlot: { start: string; end: string }) => {
     if (mode !== "click") return
+    if (!participantName.trim()) return
     const slotKey = getSlotKey(day, timeSlot)
     const next = new Set(selectedSlots)
     if (next.has(slotKey)) next.delete(slotKey)
     else next.add(slotKey)
     setSelectedSlots(next)
-  }, [mode, selectedSlots])
+  }, [mode, selectedSlots, participantName])
 
   const handleMouseDown = useCallback((day: string, timeSlot: { start: string; end: string }) => {
     if (mode !== "drag") return
+    if (!participantName.trim()) return
     const slotKey = getSlotKey(day, timeSlot)
     setIsDragging(true)
     setDragStartSlot(slotKey)
@@ -133,10 +160,11 @@ export default function VotePanel({ id }: { id: string }) {
     if (isSelected) next.delete(slotKey)
     else next.add(slotKey)
     setSelectedSlots(next)
-  }, [mode, selectedSlots])
+  }, [mode, selectedSlots, participantName])
 
   const handleMouseEnter = useCallback((day: string, timeSlot: { start: string; end: string }) => {
     if (mode !== "drag" || !isDragging || !dragStartSlot) return
+    if (!participantName.trim()) return
     const slotKey = getSlotKey(day, timeSlot)
     const next = new Set(selectedSlots)
     getDraggedSlots(dragStartSlot, slotKey).forEach((slot) => {
@@ -144,7 +172,7 @@ export default function VotePanel({ id }: { id: string }) {
       else next.delete(slot)
     })
     setSelectedSlots(next)
-  }, [mode, isDragging, dragStartSlot, selectedSlots, dragMode])
+  }, [mode, isDragging, dragStartSlot, selectedSlots, dragMode, participantName])
 
   const handleMouseUp = useCallback(() => {
     if (mode !== "drag") return
@@ -173,6 +201,7 @@ export default function VotePanel({ id }: { id: string }) {
   }
 
   const selectWorkingHours = () => {
+    if (!participantName.trim()) return
     const working = new Set<string>()
     const workingTimeSlots = TIME_SLOTS.filter((slot) => slot.start >= "09:00" && slot.start < "18:00")
     weekdays.forEach((day) => {
@@ -222,7 +251,7 @@ export default function VotePanel({ id }: { id: string }) {
 
   const handleSubmit = async () => {
     if (!participantName.trim()) {
-      alert("請輸入您的暱稱")
+      alert("請先輸入您的暱稱")
       return
     }
     if (selectedSlots.size === 0) {
@@ -236,10 +265,18 @@ export default function VotePanel({ id }: { id: string }) {
 
     setIsSubmitting(true)
     try {
-      const participant = await participantsApi.create(id, { name: participantName })
+      let participantId = existingParticipantId
+      if (!participantId) {
+        const participant = await participantsApi.create(eventData.id, { name: participantName.trim() })
+        participantId = participant.id
+      } else {
+        // 覆寫前清空舊時段
+        await timeSlotsApi.clearByParticipant(eventData.id, participantId)
+      }
+
       const timeSlots = convertSelectedSlotsToTimeSlots(selectedSlots)
-      await timeSlotsApi.submit(id, { participantId: participant.id, timeSlots })
-      router.replace(`/events/${id}?tab=results`)
+      await timeSlotsApi.submit(eventData.id, { participantId, timeSlots })
+      router.replace(`/events/${eventData.id}?tab=results`)
     } catch (error) {
       console.error('提交投票失敗:', error)
       alert(error instanceof Error ? error.message : '提交失敗，請稍後再試')
