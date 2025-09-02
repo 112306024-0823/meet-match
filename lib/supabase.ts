@@ -1,7 +1,11 @@
-import { createClient } from '@supabase/supabase-js'
+﻿import { createClient } from "@supabase/supabase-js"
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || "https://oeihhzyppgvxlbmbleeh.supabase.co"
+const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9laWhoenlwcGd2eGxibWJsZWVoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTY0NDczNDMsImV4cCI6MjA3MjAyMzM0M30.gbaS1vWn-ZRLvCyQ23G-eoNQGyJJRPCqDDNbh8qCY84"
+
+if (!supabaseUrl || !supabaseAnonKey) {
+  throw new Error("Missing Supabase environment variables")
+}
 
 export const supabase = createClient(supabaseUrl, supabaseAnonKey)
 
@@ -102,7 +106,7 @@ export interface Database {
           event_id: string
           participant_id: string
           time_slot_id: string
-          vote_type: 'yes' | 'no' | 'maybe'
+          vote_type: "yes" | "no" | "maybe"
           created_at: string
         }
         Insert: {
@@ -110,7 +114,7 @@ export interface Database {
           event_id: string
           participant_id: string
           time_slot_id: string
-          vote_type: 'yes' | 'no' | 'maybe'
+          vote_type: "yes" | "no" | "maybe"
           created_at?: string
         }
         Update: {
@@ -118,7 +122,7 @@ export interface Database {
           event_id?: string
           participant_id?: string
           time_slot_id?: string
-          vote_type?: 'yes' | 'no' | 'maybe'
+          vote_type?: "yes" | "no" | "maybe"
           created_at?: string
         }
       }
@@ -150,4 +154,4 @@ export interface Database {
       }
     }
   }
-} 
+}
