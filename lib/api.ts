@@ -198,3 +198,6 @@ export function convertTimeSlotsToSelectedSlots(timeSlots: TimeSlot[]): Set<stri
     timeSlots.map(slot => `${slot.day}-${slot.timeStart}-${slot.timeEnd}`)
   )
 } 
+
+
+
